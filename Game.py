@@ -148,11 +148,21 @@ class Game(object):
             player_action = self.players_actions()
             if player_action == Action.Stand:
                 break
-            # TODO: maybe modify draw cards to take dealer/player as arg
+
             self.draw_cards('p')
+
             print("Dealer hand: %s, %d" % (self.dealer.hand, sum(self.dealer.hand)))
             print("Player hand: %s, %d" % (self.player.hand, sum(self.player.hand)))
             code = self.condition()
+
+            # if player doubled
+            if player_action == Action.Double:
+                # checked if player had enough tokens
+                # deducted from player balance
+                # add to current bet
+                self.current_bet *= 2
+                # end player draw (only one draw on doubles)
+                break
 
         # dealer draws if game hasn't ended
         if code == 0:

@@ -37,6 +37,14 @@ class Player(object):
             except ValueError:
                 print("Not a valid action.")
                 continue
+            # if double, check if enough tokens
+            if action == Action.Double:
+                if self.bet > self.tokens:
+                    print("Not enough tokens.")
+                    continue
+                else:
+                    self.tokens -= self.bet
+                    self.bet *= 2
             print("Player chose to %s" % action.name)
             break
         return action
@@ -48,7 +56,6 @@ class Player(object):
         :param max_bet: maximum bet
         :return: player's validated bet
         """
-
         while True:
             # check int
             try:
@@ -75,6 +82,7 @@ class Player(object):
 
         # deduct bet from token
         self.tokens -= bet
+        self.bet = bet
         return bet
 
 
