@@ -6,7 +6,7 @@ did not implement split because I found that kind of complicated.
 Run game with the following command:
 > python game.py --tokens <N_TOKENS> --ndecks <N_DECKS> --minbet <MIN_BET> --maxbet <MAX_BET>
 where
-- N_TOKENS: number of tokens you want to start with, default is 2000
-- N_DECKS: number of decks to use, default is 8
-- MIN_BET: minimum bet allowed, default 1
-- MAX_BET: maximum bet allowed, default 500
+- ``N_TOKENS``: number of tokens you want to start with, default is 2000
+- ``N_DECKS``: number of decks to use, default is 8
+- ``MIN_BET``: minimum bet allowed, default 1
+- ``MAX_BET``: maximum bet allowed, default 500
