@@ -1,6 +1,9 @@
-from Player import *
-from Cards import *
+from enum import Enum
+from Player import Player, Dealer, Action
+from Cards import Card, Deck, get_hand_best_value, get_hand_value
 from time import sleep
+import sys
+import argparse
 
 
 class Condition(Enum):
@@ -13,14 +16,17 @@ class Condition(Enum):
 
 class Game(object):
     def __init__(self, num_player=1, player_tokens=1000,
-                 ndecks=6, shuffle_lim=10):
+                 min_bet=10, max_bet=500,
+                 ndecks=6, shuffle_lim=10,
+                 sleep_time=0.7):
         # self.players = [Player.Player(ntokens=player_tokens) for _ in range(num_player)]
         self.player = Player(ntokens=player_tokens)
         self.dealer = Dealer()
         self.draw_count = 0  # keeps track of number of draws - first two counts as one
-        self.min_bet = 10
-        self.max_bet = 500
+        self.min_bet = min_bet
+        self.max_bet = max_bet
         self.current_bet = 0
+        self.sleep_time = sleep_time
         self.deck = Deck(ndecks, shuffle_lim)
 
     def initialize_round(self):
@@ -29,7 +35,6 @@ class Game(object):
         self.player.initialize()
         # clear dealer hand
         self.dealer.initialize()
-        # clear draw count
         self.draw_count = 0
 
     def players_bet(self):
@@ -42,7 +47,7 @@ class Game(object):
             new_card.reveal()
 
         if side == 'p':
-            self.player.hand.append(new_card)
+            self.player.hands[0].append(new_card)
         elif side == 'd':
             self.dealer.hand.append(new_card)
 
@@ -58,7 +63,7 @@ class Game(object):
         # split and double only occurs in draw one
         if self.draw_count == 1:
             valid_actions.append(Action.Double)
-            if len(self.player.hand) == 2 and self.player.hand[0].value == self.player.hand[1].value:
+            if len(self.player.hands[0]) == 2 and self.player.hands[0][0].value == self.player.hands[0][1].value:
                 valid_actions.append(Action.Split)
 
         action = self.player.choose_action(valid_actions)
@@ -94,7 +99,7 @@ class Game(object):
         :return: condition code
         """
         # check blackjack
-        if get_hand_best_value(self.player.hand) == 21:
+        if get_hand_best_value(self.player.hands[0]) == 21:
             # player blackjack, pays 3 to 2
             if self.draw_count == 1:
                 # check if dealer also blackjack
@@ -104,7 +109,7 @@ class Game(object):
             print("Dealer got a blackjack!")
             return Condition.LOSE
         # check player bust
-        elif get_hand_best_value(self.player.hand) > 21:
+        elif get_hand_best_value(self.player.hands[0]) > 21:
             print("You busted!")
             return Condition.LOSE
         # check dealer bust
@@ -121,7 +126,7 @@ class Game(object):
         :return: a result code
         """
         # take max <= 21
-        player_best = get_hand_best_value(self.player.hand)
+        player_best = get_hand_best_value(self.player.hands[0])
         dealer_best = get_hand_best_value(self.dealer.hand)
 
         # check blackjack
@@ -146,21 +151,24 @@ class Game(object):
         if len(dealer_print) == 0:
             dealer_print = [min(dealer_values)]
 
-        player_values = get_hand_value(self.player.hand)
+        player_values = get_hand_value(self.player.hands[0])
         player_print = sorted([val for val in player_values if val <= 21])
         if len(player_print) == 0:
             player_print = [min(player_values)]
-
-        print("Dealer hand: %s, %s" %
-              (self.dealer.hand, dealer_print))
-        print("Player hand: %s, %s" %
-              (self.player.hand, player_print))
+        print("Dealer hand:")
+        print("%s, %s" % (self.dealer.hand, dealer_print))
         print()
-        sleep(0.5)
+        print("Player hand:")
+        print("%s, %s" %
+              (self.player.hands[0], player_print))
+        print()
+        sleep(self.sleep_time)
+
+    def split(self):
+        pass
 
     def round(self):
         self.initialize_round()
-        print("Player making bet...")
         self.players_bet()
         # draw two initial cards
         print("Drawing first two cards...")
@@ -171,19 +179,18 @@ class Game(object):
 
         self.draw_count += 1
 
-        # self.player.hand = [Card(Suit['SPADE'], 1), Card(Suit['SPADE'], 11)]
         self.display_hands()
 
-        # check for condition
-        code = self.condition()
+        code = Condition.CONTINUE
 
         # player draws until 21 or stand or double or busted
         while True:
             # drew to 21
-            if get_hand_best_value(self.player.hand) == 21:
+            if get_hand_best_value(self.player.hands[0]) == 21:
+                code = Condition.BLACKJACK
                 break
             # busted, reveal dealer card and end round
-            if get_hand_best_value(self.player.hand) > 21:
+            if get_hand_best_value(self.player.hands[0]) > 21:
                 code = Condition.LOSE
                 # reveal dealer's cards
                 for card in self.dealer.hand:
@@ -205,7 +212,6 @@ class Game(object):
             self.draw_cards('p', face_down=False)
             self.draw_count += 1
             self.display_hands()
-            code = self.condition()
 
             # if player doubled
             if player_action == Action.Double:
@@ -221,13 +227,15 @@ class Game(object):
             card.reveal()
         self.display_hands()
 
-        # dealer draws until >= 17
-        while True:
-            dealer_action = self.dealer.choose_action()
-            if dealer_action == Action.Stand:
-                break
-            self.draw_cards('d', face_down=False)
-            self.display_hands()
+        # if player blackjack, skip dealer drawing
+        if code != Condition.BLACKJACK:
+            # dealer draws until >= 17
+            while True:
+                dealer_action = self.dealer.choose_action()
+                if dealer_action == Action.Stand:
+                    break
+                self.draw_cards('d', face_down=False)
+                self.display_hands()
 
         # dealer done drawing but still no result, so compare hands
         code = self.compare_hands()
@@ -237,12 +245,27 @@ class Game(object):
 
 
 if __name__ == "__main__":
-    game = Game()
-    print(game.player)
+    parser = argparse.ArgumentParser(description="Fair and Square Blackjack")
+    parser.add_argument('--tokens', type=int, default=2000, help='number of tokens to buy in')
+    parser.add_argument('--ndecks', type=int, default=8, help='number of decks to play with')
+    parser.add_argument('--minbet', type=int, default=1, help='minimum bet allowed')
+    parser.add_argument('--maxbet', type=int, default=500, help='maximum bet allowed')
 
-    while True:
-        if game.player.tokens < game.min_bet:
-            print("You're broke.")
-            break
-        print("Player has %d tokens remaining." % game.player.tokens)
-        game.round()
+    args = parser.parse_args()
+    try:
+        game = Game(player_tokens=args.tokens, ndecks=args.ndecks,
+                    min_bet=args.minbet, max_bet=args.maxbet)
+
+        while True:
+            if game.player.tokens < game.min_bet:
+                print("You're broke.")
+                break
+            print("Player has %d tokens remaining." % game.player.tokens)
+            game.round()
+            if game.deck.shuffle_next:
+                game.deck.shuffle_cards()
+                print("Shuffling cards...")
+                sleep(1.5)
+    except KeyboardInterrupt:
+        print("User keyboard interrupt. Quitting...")
+        sys.exit(0)

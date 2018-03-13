@@ -11,7 +11,7 @@ class Action(Enum):
 
 class Player(object):
     def __init__(self, ntokens=100):
-        self.hand = [] # list of Cards
+        self.hands = [[]] # list of list of Cards
         self.tokens = ntokens
         self.bet = 0
 
@@ -20,7 +20,7 @@ class Player(object):
         Clear bets and hand for next round
         :return: None
         """
-        self.hand = []
+        self.hands = [[]]
         self.bet = 0
 
     def choose_action(self, valid_actions):
@@ -94,7 +94,7 @@ class Player(object):
 
 class Dealer(object):
     def __init__(self):
-        self.hand = []
+        self.hand = [] # list of cards, since dealer can't split
 
     def initialize(self):
         """
