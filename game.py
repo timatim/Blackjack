@@ -1,6 +1,6 @@
 from enum import Enum
-from Player import Player, Dealer, Action
-from Cards import Card, Deck, get_hand_best_value, get_hand_value
+from players import Player, Dealer, Action
+from cards import Card, Deck, get_hand_best_value, get_hand_value
 from time import sleep
 import sys
 import argparse

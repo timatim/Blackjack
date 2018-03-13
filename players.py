@@ -1,5 +1,5 @@
 from enum import Enum
-from Cards import get_hand_best_value
+from cards import get_hand_best_value
 
 
 class Action(Enum):
