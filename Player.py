@@ -1,4 +1,5 @@
 from enum import Enum
+from Cards import get_hand_best_value
 
 
 class Action(Enum):
@@ -35,17 +36,22 @@ class Player(object):
                                                  for act in valid_actions])
                                       + '\n'))
             except ValueError:
-                print("Not a valid action.")
+                print("Not a valid action.\n")
                 continue
+
+            if action not in valid_actions:
+                print("Not a valid action.\n")
+                continue
+
             # if double, check if enough tokens
             if action == Action.Double:
                 if self.bet > self.tokens:
-                    print("Not enough tokens.")
+                    print("Not enough tokens.\n")
                     continue
                 else:
                     self.tokens -= self.bet
                     self.bet *= 2
-            print("Player chose to %s" % action.name)
+            print("Player chose to %s\n" % action.name)
             break
         return action
 
@@ -103,8 +109,7 @@ class Dealer(object):
         Must draw to at least hard 17
         :return: 
         """
-        # TODO: refine rule
-        if sum(self.hand) < 17:
+        if get_hand_best_value(self.hand) < 17:
             return Action.Hit
         else:
             return Action.Stand

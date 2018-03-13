@@ -28,7 +28,7 @@ class Card(object):
     """
     Representation of a single poker card
     """
-    def __init__(self, suit, face):
+    def __init__(self, suit, face, is_face_down=True):
         """
         Create a poker card
         :param suit: one of Suit enum
@@ -38,25 +38,77 @@ class Card(object):
         self.face = face
         self.face_str = FACES[face]
         self.value = min(face, 10)
-        self.ace = (face == 1)
-        if self.ace:
-            self.value += 10
+        self.face_down = True
+        self.is_ace = False
+        if not is_face_down:
+            self.reveal()
+
+    def hide(self):
+        """
+        Turn card face down
+        :return: 
+        """
+        if not self.face_down:
+            self.face_down = True
+
+    def reveal(self):
+        """
+        Turn card face up
+        :return: 
+        """
+        if self.face_down:
+            self.face_down = False
+            self.is_ace = self.face == 1
 
     def __add__(self, other):
-        # TODO: consider Ace
+        val = 0 if self.face_down else self.value
         if type(other) == int:
-            return self.value + other
+            return val + other
         else:
-            return self.value + other.value
+            return val + other.value
 
     def __radd__(self, other):
         return self.__add__(other)
 
     def __str__(self):
-        return '%s %s' % (self.suit.name, self.face_str)
+        if not self.face_down:
+            return '%s %s' % (self.suit.name, self.face_str)
+        else:
+            return '* *'
 
     def __repr__(self):
         return self.__str__()
+
+
+def get_hand_value(cards):
+    """
+    Calculates possible values of a list of cards
+    :param cards: list of cards
+    :return: list of int of possible values
+    """
+    values = [0]
+
+    for card in cards:
+        new_values = set()
+        for val in values:
+            new_values.add(val + card)
+            # handle ace
+            if card.is_ace:
+                new_values.add(val + 11)
+        values = list(new_values)
+
+    return list(set(values))
+
+
+def get_hand_best_value(cards):
+    """
+    Returns a single int of the best hand value on current cards, i.e. largest < 21
+    Returns 99 if all busted
+    :param cards: current cards
+    :return: int of best hand value
+    """
+    values = [val for val in get_hand_value(cards) if val <= 21]
+    return 99 if len(values) == 0 else max(values)
 
 
 class Deck(object):
@@ -113,15 +165,32 @@ if __name__ == "__main__":
     print(deck.cards)
     assert len(deck) == ndecks * 52
     card0 = deck.draw()
+    card0.reveal()
     print("Drew first card: %s" % card0)
     assert len(deck) == ndecks * 52 - 1
 
     card1 = deck.draw()
+    card1.reveal()
     print("Drew second card: %s" % card1)
     assert sum([card0, card1]) == card0.value + card1.value
 
     deck.shuffle_cards()
     assert len(deck) == ndecks * 52
 
-    # 85 per suit, 4 suits
-    assert sum(deck) == ndecks * 4 * 85
+    # test calculating hand value
+    hand = [Card(Suit(1), 1, is_face_down=False),
+            Card(Suit(1), 10, is_face_down=False)]
+    print(get_hand_value(hand))
+    assert sorted(get_hand_value(hand)) == [11, 21]
+
+    hand = [Card(Suit(1), 1, is_face_down=False),
+            Card(Suit(1), 10, is_face_down=False),
+            Card(Suit(1), 1, is_face_down=False)]
+    print(get_hand_value(hand))
+    assert sorted(get_hand_value(hand)) == [12, 22, 32]
+
+    hand = [Card(Suit(1), 1, is_face_down=True),
+            Card(Suit(1), 10, is_face_down=False),
+            Card(Suit(1), 1, is_face_down=False)]
+    print(get_hand_value(hand))
+    assert sorted(get_hand_value(hand)) == [11, 21]
